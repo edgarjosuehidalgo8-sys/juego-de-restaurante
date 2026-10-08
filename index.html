@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi Restaurante</title>
+<style>
+body{font-family:sans-serif;margin:0;padding:12px;text-align:center;color:#3e2410;background:linear-gradient(#f2c48d 0 78%,#8b5a3c 78% 100%) fixed}
+h1{color:#b3330c;margin:4px}
+.top{font-size:18px;margin:6px;font-weight:bold}
+#estrellas{font-size:20px;min-height:26px}
+#guardado{font-size:12px;opacity:.7;min-height:14px}
+#ventana{position:relative;width:92%;max-width:420px;height:255px;margin:10px auto;border:8px solid #6d4326;border-radius:10px;background:linear-gradient(#bfe3f5,#e8f6fc);overflow:hidden}
+#decos{position:absolute;left:0;right:0;top:4px;font-size:26px;letter-spacing:6px;z-index:2}
+#cliente{position:absolute;left:0;right:0;top:0;bottom:24px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}
+#mostrador{position:absolute;left:0;right:0;bottom:0;height:24px;background:#8b5a3c}
+#burbuja{background:#fff;border:2px solid #6d4326;border-radius:14px;padding:4px 10px;font-size:18px;margin-bottom:2px}
+#burbuja.mama{background:#fff0f5;border-color:#c2185b}
+#burbuja.vip{background:#fff8d6;border-color:#d4a017}
+#burbuja .etq{display:block;font-size:12px;font-weight:bold;color:#9a6b00}
+#persona{font-size:80px;line-height:1}
+.entra{animation:entra .5s ease-out}
+.sale{animation:sale .4s ease-in forwards}
+@keyframes entra{from{transform:translateX(-200%)}to{transform:translateX(0)}}
+@keyframes sale{to{transform:translateX(200%)}}
+#plato{min-height:44px;font-size:34px;background:#fffaf0;border-radius:14px;margin:10px 0;padding:6px}
+button{font-size:28px;margin:4px;padding:8px 12px;border:none;border-radius:14px;background:#fffaf0;box-shadow:0 3px 6px #0004}
+button:active{transform:scale(.92)}
+button.acc{font-size:18px;background:#43a047;color:#fff}
+button.sec{font-size:18px;background:#ffab91}
+button.mama{font-size:18px;background:#c2185b;color:#fff}
+button.nueva{font-size:15px;background:#6d4326;color:#fff;margin:20px 0 30px}
+button.snd{position:fixed;top:8px;right:8px;font-size:22px;padding:4px 10px;z-index:5}
+button.mus{position:fixed;top:8px;right:60px;font-size:22px;padding:4px 10px;z-index:5}
+button.beb.sel{background:#81d4fa;box-shadow:0 0 0 3px #0288d1}
+#msg{min-height:22px;font-weight:bold;margin:8px}
+.tienda button{display:block;width:100%;font-size:15px;text-align:left;margin:4px 0}
+.tienda button:disabled{opacity:.5}
+h3{margin:14px 0 6px}
+.rl,.lg{background:#fffaf0;border-radius:12px;padding:8px 12px;margin:4px 0;text-align:left;font-size:15px;box-shadow:0 2px 4px #0003}
+.rl.bloq,.lg.no{opacity:.6}
+.rl .em{font-size:22px}
+</style>
+</head>
+<body>
+<button class="mus" id="btnMusica" onclick="alternarMusica()">🎵</button>
+<button class="snd" id="btnSonido" onclick="alternarSonido()">🔊</button>
+<h1>🍽️ Mi Restaurante</h1>
+<div id="estrellas"></div>
+<div class="top">💰 $<span id="dinero">0</span> | 🍴 <span id="servidos">0</span> | 🔥 Racha: <span id="racha">0</span></div>
+<div id="guardado"></div>
+<div id="ventana"><div id="decos"></div><div id="cliente"></div><div id="mostrador"></div></div>
+<button class="mama" id="btnMama" style="display:none" onclick="aprender()">📖 Aprender receta</button>
+<div id="msg">Espera al primer cliente...</div>
+<div id="plato"></div>
+<div id="ingr"></div>
+<div id="bebidas"></div>
+<button class="sec" onclick="borrar();sBorrar()">🗑️ Borrar</button>
+<button class="acc" onclick="servir()">✅ Servir</button>
+<h3>📖 Libro de recetas</h3><div id="libro"></div>
+<h3>🛒 Tienda</h3><div class="tienda" id="tienda"></div>
+<h3>🏆 Logros</h3><div id="logros"></div>
+<button class="nueva" onclick="nuevaPartida()">🆕 Nueva partida</button>
+
+<script>
+const INGR=['🍞','🥩','🧀','🥬','🍅','🍳','🫘','🌽','🍚','🥑','🌶️','🍗','🥔'];
+const BEBIDAS=['🥤','🧃','☕','🍹'];
+const CARAS=['🧍','🧍‍♀️','🧍‍♂️'];
+const CLAVE='restauranteGuardado',CLAVE_SONIDO='restauranteSonido',CLAVE_MUSICA='restauranteMusica';
+const RECETAS=[
+{n:'Sándwich',r:['🍞','🧀','🍞'],p:8,req:0,costo:0},
+{n:'Ensalada',r:['🥬','🍅'],p:6,req:3,costo:10},
+{n:'Frijoles de la olla',r:['🫘','🌶️'],p:7,req:6,costo:30},
+{n:'Tostada con huevo',r:['🍞','🍳','🍞'],p:9,req:12,costo:50},
+{n:'Huevos rancheros',r:['🍳','🫘','🍅'],p:11,req:20,costo:80},
+{n:'Hamburguesa',r:['🍞','🥩','🧀','🍞'],p:12,req:30,costo:120},
+{n:'Arroz con frijoles',r:['🍚','🫘','🥑'],p:14,req:42,costo:170},
+{n:'Tacos de carne',r:['🌽','🥩','🌶️'],p:15,req:55,costo:230},
+{n:'Ensalada especial',r:['🥬','🍅','🧀','🍳'],p:17,req:70,costo:300},
+{n:'Pollo con papas',r:['🍗','🥔','🥬'],p:19,req:90,costo:400},
+{n:'Doble carne',r:['🍞','🥩','🧀','🥩','🍞'],p:22,req:115,costo:520},
+{n:'Burrito',r:['🌽','🫘','🥩','🧀','🥑'],p:27,req:145,costo:680},
+{n:'Súper plato',r:['🍞','🥬','🍅','🥩','🧀','🍳','🍞'],p:40,req:180,costo:900},
+{n:'Banquete mexicano',r:['🍚','🫘','🍗','🥑','🌶️','🥔','🌽'],p:55,req:220,costo:1200}
+];
+const ESPECIALES={
+critico:{cara:'🧐',t:'🧐 Crítico de comida: paga x2'},
+millonario:{cara:'🤑',t:'🤑 Millonario: propina de $25'},
+nino:{cara:'🧒',t:'🧒 Niño: propina de $8'}
+};
+const DECOS=[
+{e:'🪴',n:'Planta',c:60},{e:'🖼️',n:'Cuadro',c:90},{e:'💡',n:'Luces',c:120},{e:'🕰️',n:'Reloj',c:150},{e:'🏮',n:'Farolitos',c:200}
+];
+const LOGROS=[
+{id:'primero',n:'Primer plato',d:'Sirve 1 plato',ok:()=>s.servidos>=1},
+{id:'diez',n:'Cocinero novato',d:'Sirve 10 platos',ok:()=>s.servidos>=10},
+{id:'cincuenta',n:'Chef experto',d:'Sirve 50 platos',ok:()=>s.servidos>=50},
+{id:'mil',n:'Negocio próspero',d:'Gana $1000 en total',ok:()=>s.ganado>=1000},
+{id:'racha5',n:'En racha',d:'Llega a una racha de 5',ok:()=>s.mejor>=5},
+{id:'bar',n:'Barman',d:'Abre el bar',ok:()=>s.bar},
+{id:'deco',n:'Local de lujo',d:'Compra 5 decoraciones',ok:()=>s.deco.length>=5},
+{id:'libro',n:'Libro completo',d:'Aprende todas las recetas',ok:()=>s.nivel>=RECETAS.length},
+{id:'vip',n:'Cliente VIP',d:'Atiende a un cliente especial',ok:()=>s.esp>=1},
+{id:'vip10',n:'Atención de lujo',d:'Atiende a 10 clientes especiales',ok:()=>s.esp>=10}
+];
+function inicial(){return {dinero:0,ganado:0,servidos:0,plato:[],bebida:'',prop:0,nivel:1,deco:[],bar:false,logros:[],racha:0,mejor:0,esp:0};}
+let s=inicial(),c=null,tLlega=null;
+const $=id=>document.getElementById(id);
+function msg(t){$('msg').textContent=t;}
+function aprendidas(){return RECETAS.slice(0,s.nivel);}
+function mamaLista(){if(s.nivel>=RECETAS.length)return false;const r=RECETAS[s.nivel];return s.servidos>=r.req&&s.dinero>=r.costo;}
+function programar(ms){clearTimeout(tLlega);tLlega=setTimeout(llegaCliente,ms);}
+
+// ---------- SONIDO Y MÚSICA ----------
+let audioCtx=null,sonido=true,musica=true,musicaTimer=null,paso=0;
+try{if(localStorage.getItem(CLAVE_SONIDO)==='0')sonido=false;}catch(e){}
+try{if(localStorage.getItem(CLAVE_MUSICA)==='0')musica=false;}catch(e){}
+function ctxAudio(){
+ if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+ if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+ return audioCtx;
+}
+function tono(freq,dur,tipo,vol,retraso,esMusica){
+ if(esMusica?!musica:!sonido)return;
+ const a=ctxAudio();if(!a)return;
+ const t=a.currentTime+(retraso||0),o=a.createOscillator(),g=a.createGain();
+ o.type=tipo||'sine';o.frequency.setValueAtTime(freq,t);
+ g.gain.setValueAtTime(0.0001,t);
+ g.gain.exponentialRampToValueAtTime(vol||0.2,t+0.02);
+ g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+ o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.05);
+}
+function sPop(){tono(620,0.08,'triangle',0.25);}
+function sBorrar(){tono(300,0.12,'triangle',0.2);}
+function sOk(){tono(880,0.12,'sine',0.25);tono(1175,0.3,'sine',0.25,0.1);}
+function sMal(){tono(160,0.3,'sawtooth',0.15);}
+function sCliente(){tono(988,0.3,'sine',0.25);tono(784,0.45,'sine',0.25,0.25);}
+function sMama(){[523,659,784,1047].forEach((f,i)=>tono(f,0.25,'triangle',0.2,i*0.15));}
+function sAprender(){[523,659,784,1047].forEach((f,i)=>tono(f,0.2,'square',0.12,i*0.12));tono(1319,0.5,'square',0.12,0.5);}
+function sCompra(){tono(1200,0.08,'square',0.1);tono(1600,0.14,'square',0.1,0.08);}
+function sEspecial(){[784,988,1175,1568].forEach((f,i)=>tono(f,0.18,'sine',0.22,i*0.1));}
+const MELODIA=[523,0,659,0,784,659,0,587,659,0,784,0,880,784,0,659,587,0,698,0,880,698,0,587,523,0,659,784,1047,784,659,0];
+const BAJOS=[131,175,196,131];
+function pasoMusica(){
+ const a=audioCtx;
+ if(!musica||!a||a.state!=='running')return;
+ const f=MELODIA[paso%MELODIA.length];
+ if(f)tono(f,0.35,'sine',0.05,0,true);
+ if(paso%8===0)tono(BAJOS[Math.floor(paso/8)%BAJOS.length],1.2,'triangle',0.07,0,true);
+ paso++;
+}
+function iniciarMusica(){if(musicaTimer||!musica)return;if(!ctxAudio())return;musicaTimer=setInterval(pasoMusica,320);}
+function detenerMusica(){clearInterval(musicaTimer);musicaTimer=null;}
+function alternarSonido(){
+ sonido=!sonido;$('btnSonido').textContent=sonido?'🔊':'🔇';
+ try{localStorage.setItem(CLAVE_SONIDO,sonido?'1':'0');}catch(e){}
+ if(sonido)sPop();
+}
+function alternarMusica(){
+ musica=!musica;$('btnMusica').textContent=musica?'🎵':'🔕';
+ try{localStorage.setItem(CLAVE_MUSICA,musica?'1':'0');}catch(e){}
+ if(musica)iniciarMusica();else detenerMusica();
+}
+document.addEventListener('pointerdown',()=>{ctxAudio();iniciarMusica();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)detenerMusica();else iniciarMusica();});
+$('btnSonido').textContent=sonido?'🔊':'🔇';
+$('btnMusica').textContent=musica?'🎵':'🔕';
+
+// ---------- GUARDADO ----------
+function guardar(){
+ try{
+  localStorage.setItem(CLAVE,JSON.stringify({dinero:s.dinero,ganado:s.ganado,servidos:s.servidos,prop:s.prop,nivel:s.nivel,deco:s.deco,bar:s.bar,logros:s.logros,mejor:s.mejor,esp:s.esp}));
+  $('guardado').textContent='💾 Partida guardada';
+ }catch(e){$('guardado').textContent='⚠️ Este navegador no permite guardar';}
+}
+function cargar(){
+ try{
+  const t=localStorage.getItem(CLAVE);if(!t)return false;
+  const d=JSON.parse(t);
+  s.dinero=d.dinero||0;s.ganado=d.ganado||s.dinero;s.servidos=d.servidos||0;s.prop=d.prop||0;
+  s.nivel=Math.min(Math.max(d.nivel||1,1),RECETAS.length);
+  s.deco=Array.isArray(d.deco)?d.deco:[];s.bar=!!d.bar;
+  s.logros=Array.isArray(d.logros)?d.logros:[];s.mejor=d.mejor||0;s.esp=d.esp||0;
+  return true;
+ }catch(e){return false;}
+}
+function nuevaPartida(){
+ if(!confirm('¿Seguro? Se borrará todo tu progreso.'))return;
+ try{localStorage.removeItem(CLAVE);}catch(e){}
+ s=inicial();c=null;renderCliente();mostrar();plato();
+ $('guardado').textContent='';
+ msg('Nueva partida. Espera al primer cliente...');
+ programar(800);
+}
+
+// ---------- PANTALLA ----------
+function estrellas(){return Math.min(5,1+Math.floor(s.servidos/30));}
+function mostrar(){
+ $('dinero').textContent=s.dinero;$('servidos').textContent=s.servidos;$('racha').textContent=s.racha;
+ $('estrellas').textContent='⭐'.repeat(estrellas());
+ renderLibro();renderTienda();renderBebidas();renderDecos();renderLogros();guardar();
+}
+function plato(){
+ const t=s.plato.join('')+(s.bebida?(s.plato.length?' + ':'')+s.bebida:'');
+ $('plato').textContent=t||'Plato vacío';
+}
+function borrar(){s.plato=[];s.bebida='';plato();renderBebidas();}
+function renderDecos(){$('decos').textContent=s.deco.join('');}
+function renderBebidas(){
+ const d=$('bebidas');d.innerHTML='';
+ if(!s.bar)return;
+ BEBIDAS.forEach(b=>{
+  const x=document.createElement('button');
+  x.className='beb'+(s.bebida===b?' sel':'');x.textContent=b;
+  x.onclick=()=>{s.bebida=(s.bebida===b?'':b);plato();renderBebidas();sPop();};
+  d.appendChild(x);
+ });
+}
+function renderLibro(){
+ const d=$('libro');d.innerHTML='';
+ RECETAS.forEach((r,i)=>{
+  const ok=i<s.nivel,x=document.createElement('div');
+  x.className='rl'+(ok?'':' bloq');
+  if(ok)x.innerHTML='<b>'+r.n+'</b> — $'+r.p+'<br><span class="em">'+r.r.join('')+'</span>';
+  else if(i===s.nivel&&s.servidos>=r.req&&s.dinero<r.costo)x.innerHTML='💰 <b>???</b><br>Junta $'+r.costo+' para los ingredientes';
+  else if(i===s.nivel&&s.servidos>=r.req)x.innerHTML='👵 <b>???</b><br>Mamá te la traerá pronto';
+  else{const falta=Math.max(0,r.req-s.servidos);x.innerHTML='🔒 <b>???</b><br>'+(falta?'Sirve '+falta+' platos más y ':'')+'junta $'+r.costo;}
+  d.appendChild(x);
+ });
+}
+function renderLogros(){
+ const d=$('logros');d.innerHTML='';
+ LOGROS.forEach(l=>{
+  const ok=s.logros.includes(l.id),x=document.createElement('div');
+  x.className='lg'+(ok?'':' no');
+  x.innerHTML=ok?'🏆 <b>'+l.n+'</b>':'🔒 '+l.n+' — '+l.d;
+  d.appendChild(x);
+ });
+}
+function checkLogros(silencio){
+ const nuevos=[];
+ LOGROS.forEach(l=>{if(!s.logros.includes(l.id)&&l.ok()){s.logros.push(l.id);nuevos.push(l.n);}});
+ if(nuevos.length&&!silencio){sAprender();$('msg').textContent+=' 🏆 Logro: '+nuevos.join(', ');}
+}
+function renderCliente(){
+ if(!c){$('cliente').innerHTML='';$('btnMama').style.display='none';return;}
+ if(c.mama){
+  $('cliente').innerHTML='<div id="burbuja" class="mama"><b>¡Te traje una receta nueva!</b><br>'+c.n+'<br>'+c.r.join('')+'</div><div id="persona" class="entra">👵</div>';
+  $('btnMama').textContent='📖 Aprender receta (-$'+c.costo+')';
+  $('btnMama').style.display='inline-block';
+ }else{
+  const etq=c.esp?'<span class="etq">'+ESPECIALES[c.esp].t+'</span>':'';
+  $('cliente').innerHTML='<div id="burbuja"'+(c.esp?' class="vip"':'')+'>'+etq+'<b>'+c.n+' ($'+c.p+')</b><br>'+c.r.join('')+(c.beb?' + '+c.beb:'')+'</div><div id="persona" class="entra">'+c.cara+'</div>';
+  $('btnMama').style.display='none';
+ }
+}
+function llegaCliente(){
+ if(mamaLista()){c={...RECETAS[s.nivel],mama:true};renderCliente();sMama();msg('👵 ¡Llegó mamá con una receta!');return;}
+ let esp='';
+ if(s.servidos>=5&&Math.random()<0.18){const tipos=Object.keys(ESPECIALES);esp=tipos[Math.floor(Math.random()*tipos.length)];}
+ let lista=aprendidas();
+ if(esp==='critico')lista=lista.slice(-3);
+ if(esp==='nino')lista=lista.slice(0,3);
+ const r=lista[Math.floor(Math.random()*lista.length)];
+ const cara=esp?ESPECIALES[esp].cara:CARAS[Math.floor(Math.random()*CARAS.length)];
+ const beb=(s.bar&&Math.random()<0.5)?BEBIDAS[Math.floor(Math.random()*BEBIDAS.length)]:'';
+ c={...r,cara:cara,beb:beb,esp:esp,listo:false};
+ renderCliente();
+ if(esp){sEspecial();msg('¡Llegó un cliente especial!');}else{sCliente();msg('¡Llegó un cliente!');}
+}
+function aprender(){
+ if(!c||!c.mama)return;
+ if(s.dinero<c.costo){msg('Te faltan $'+(c.costo-s.dinero)+' para los ingredientes 💰');return;}
+ const nombre=c.n;
+ s.dinero-=c.costo;s.nivel++;c.mama=false;c.listo=true;
+ $('btnMama').style.display='none';
+ sAprender();
+ msg('👵 "¡Cocínala con cariño!" Aprendiste: '+nombre+' 🎉');
+ checkLogros();
+ $('persona').className='sale';
+ setTimeout(()=>{c=null;renderCliente();},400);
+ programar(1800);mostrar();
+}
+
+// ---------- TIENDA ----------
+function items(){
+ const l=[];
+ if(s.prop<3)l.push({t:'💵 Más propinas (+$2 por plato)',c:80*(s.prop+1),f:()=>s.prop++});
+ if(!s.bar)l.push({t:'🍹 Abrir bar de bebidas',c:150,f:()=>{s.bar=true;}});
+ DECOS.forEach(d=>{if(!s.deco.includes(d.e))l.push({t:d.e+' '+d.n+' (+$1 por plato)',c:d.c,f:()=>s.deco.push(d.e)});});
+ return l;
+}
+function renderTienda(){
+ const d=$('tienda');d.innerHTML='';
+ const l=items();
+ if(!l.length){d.textContent='Ya compraste todo 🎉';return;}
+ l.forEach(i=>{
+  const b=document.createElement('button');
+  b.textContent=i.t+' — $'+i.c;b.disabled=s.dinero<i.c;
+  b.onclick=()=>{
+   if(s.dinero>=i.c){s.dinero-=i.c;i.f();sCompra();msg('¡Compraste: '+i.t+'!');checkLogros();mostrar();}
+  };
+  d.appendChild(b);
+ });
+}
+
+// ---------- SERVIR ----------
+function servir(){
+ if(!c||c.listo){msg('Espera al siguiente cliente');return;}
+ if(c.mama){msg('Mamá te espera: toca "Aprender receta" 👵');return;}
+ const platoOk=s.plato.join('')==c.r.join('');
+ const bebOk=(s.bebida||'')===(c.beb||'');
+ if(platoOk&&bebOk){
+  const bonusCombo=Math.min(s.racha,5);
+  const tip=2*s.prop+s.deco.length;
+  const mult=c.esp==='critico'?2:1;
+  const plano=c.esp==='millonario'?25:(c.esp==='nino'?8:0);
+  const total=(c.p+(c.beb?5:0))*mult+tip+bonusCombo+plano;
+  s.dinero+=total;s.ganado+=total;s.servidos++;s.racha++;
+  if(c.esp)s.esp++;
+  if(s.racha>s.mejor)s.mejor=s.racha;
+  c.listo=true;sOk();
+  let extra=bonusCombo?' (🔥 bonus +$'+bonusCombo+')':'';
+  if(c.esp)extra+=' ⭐ ¡Cliente especial!';
+  if(mamaLista())extra+=' 👵 Mamá viene en camino...';
+  msg('¡Delicioso! +$'+total+extra);
+  checkLogros();
+  $('persona').className='sale';
+  setTimeout(()=>{c=null;renderCliente();},400);
+  programar(1800);
+ }else{
+  sMal();s.racha=0;
+  if(platoOk&&!bebOk)msg(c.beb?'Falta la bebida que pidió 🥤':'Este cliente no pidió bebida 🙂');
+  else msg('Ese no es el pedido, inténtalo otra vez 🙂');
+ }
+ borrar();mostrar();
+}
+
+INGR.forEach(x=>{
+ const b=document.createElement('button');
+ b.textContent=x;
+ b.onclick=()=>{if(s.plato.length<8){s.plato.push(x);plato();sPop();}};
+ $('ingr').appendChild(b);
+});
+if(cargar())msg('¡Bienvenido de vuelta! Partida cargada 💾');
+checkLogros(true);
+mostrar();plato();
+programar(800);
+</script>
+</body>
+  </html>
